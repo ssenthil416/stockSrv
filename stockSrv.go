@@ -14,7 +14,8 @@ const (
 	StockEndPoint     = "/stock/"
 	DefSymbol         = "AMEX"
 	StockAPIURL       = "https://www.worldtradingdata.com/api/v1/stock?symbol="
-	PostURL           = "&api_token=demo"
+	AddAPIToken       = "&api_token="
+	SampleAPIToken    = "demo"
 	HTTPClientTimeout = 15
 )
 
@@ -84,18 +85,20 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func callStockAPI(symbol string) (msg message, err error) {
-	url := StockAPIURL + symbol + PostURL
+	var url string
 	msg = message{}
+
+
+	if token != "" {
+	    url = StockAPIURL + symbol + AddAPIToken + token
+	}else{
+	    url = StockAPIURL + symbol + AddAPIToken + SampleAPIToken
+        }
 
 	// Create a new request using http
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return msg, err
-	}
-
-	// add authorization header to the req
-	if token != "" {
-		req.Header.Add("Authorization", token)
 	}
 
 	// Send req using http Client
