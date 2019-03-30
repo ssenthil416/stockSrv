@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 )
 
 const (
+	HealthEndPoint    = "/health"
 	StockEndPoint     = "/stock/"
 	DefSymbol         = "AMEX"
 	StockAPIURL       = "https://www.worldtradingdata.com/api/v1/stock?symbol="
@@ -49,24 +51,35 @@ func main() {
 	flag.Parse()
 
 	//Http router
-	http.HandleFunc(StockEndPoint, getStockDetails)
+	http.HandleFunc(HealthEndPoint, GetHealthCheck)
+	http.HandleFunc(StockEndPoint, GetStockDetails)
 	err := http.ListenAndServe(":9000", nil)
 	if err != nil {
 		log.Fatalf("Could not start stock server: %s\n", err.Error())
 	}
 }
 
-func getStockDetails(w http.ResponseWriter, r *http.Request) {
+func GetHealthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func GetStockDetails(w http.ResponseWriter, r *http.Request) {
 	symbol := DefSymbol
 	arrSymbol := strings.Split(r.URL.Path, StockEndPoint)
 
 	if len(arrSymbol) == 2 && arrSymbol[1] != "" {
 		symbol = arrSymbol[1]
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Error"))
+		return
 	}
 
 	//Get stock details
 	msg, err := callStockAPI(symbol)
 	if err != nil || msg.Symbols_returned == 0 {
+		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(msg.Message))
 		return
@@ -88,12 +101,11 @@ func callStockAPI(symbol string) (msg message, err error) {
 	var url string
 	msg = message{}
 
-
 	if token != "" {
-	    url = StockAPIURL + symbol + AddAPIToken + token
-	}else{
-	    url = StockAPIURL + symbol + AddAPIToken + SampleAPIToken
-        }
+		url = StockAPIURL + symbol + AddAPIToken + token
+	} else {
+		url = StockAPIURL + symbol + AddAPIToken + SampleAPIToken
+	}
 
 	// Create a new request using http
 	req, err := http.NewRequest("GET", url, nil)
